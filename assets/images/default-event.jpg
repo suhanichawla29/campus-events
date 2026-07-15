@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200">
+  <rect width="400" height="200" fill="#2c6aa0"/>
+  <text x="200" y="110" font-family="Arial" font-size="22" fill="white" text-anchor="middle">Campus Event</text>
+  <text x="200" y="140" font-family="Arial" font-size="14" fill="#ccc" text-anchor="middle">No Image Available</text>
+</svg>
