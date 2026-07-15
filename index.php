@@ -32,16 +32,16 @@ if (mysqli_num_rows($result) > 0) {
     </div>
 </section>
 
+<section class="about-section">
+    <h2>About Campus Events</h2>
+    <p>Campus events bring students together for learning, fun, and networking. From technical workshops to cultural fests, our platform helps you discover and register for events that match your interests.</p>
+</section>
+
 <section class="search-filter" id="events">
     <form method="GET" action="">
         <input type="text" name="search" placeholder="Search events by name or category..." value="<?= $search ?>">
         <button type="submit" class="btn btn-primary">Search</button>
     </form>
-</section>
-
-<section class="about-section">
-    <h2>About Campus Events</h2>
-    <p>Campus events bring students together for learning, fun, and networking. From technical workshops to cultural fests, our platform helps you discover and register for events that match your interests.</p>
 </section>
 
 <section class="events-section">
