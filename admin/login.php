@@ -1,0 +1,57 @@
+<?php
+session_start();
+include '../config.php';
+
+if (isset($_SESSION['admin_id'])) {
+    header("Location: index.php");
+    exit();
+}
+
+$error = "";
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $username = mysqli_real_escape_string($conn, $_POST['username']);
+    $password = $_POST['password'];
+    $result = mysqli_query($conn, "SELECT * FROM admins WHERE username = '$username' AND password = MD5('$password')");
+    if (mysqli_num_rows($result) == 1) {
+        $admin = mysqli_fetch_assoc($result);
+        $_SESSION['admin_id'] = $admin['id'];
+        $_SESSION['admin_username'] = $admin['username'];
+        header("Location: index.php");
+        exit();
+    } else {
+        $error = "Invalid admin username or password!";
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - Campus Events</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="admin-login-wrapper">
+    <div class="form-container">
+        <h2>Admin Login</h2>
+        <?php if ($error): ?>
+            <div class="alert alert-error"><?php echo $error; ?></div>
+        <?php endif; ?>
+        <form method="POST" action="">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" name="username" required>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" name="password" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Login as Admin</button>
+            <p class="form-link"><a href="../index.php">Back to Home</a></p>
+        </form>
+    </div>
+</div>
+</body>
+</html>
+
