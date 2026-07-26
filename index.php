@@ -9,8 +9,11 @@ include 'includes/config.php';
 include 'includes/header.php';
 
 $search = isset($_GET['search']) ? mysqli_real_escape_string($conn, $_GET['search']) : "";
+
 $query = "SELECT * FROM events WHERE event_date >= CURDATE() ORDER BY event_date ASC LIMIT 6";
-if ($search) $query = "SELECT * FROM events WHERE event_date >= CURDATE() AND (title LIKE '%$search%' OR description LIKE '%$search%' OR category LIKE '%$search%') ORDER BY event_date ASC LIMIT 6";
+if ($search) {
+    $query = "SELECT * FROM events WHERE event_date >= CURDATE() AND (title LIKE '%$search%' OR description LIKE '%$search%' OR category LIKE '%$search%') ORDER BY event_date ASC LIMIT 6";
+}
 $result = mysqli_query($conn, $query);
 
 $events_html = "";

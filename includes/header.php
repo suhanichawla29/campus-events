@@ -8,7 +8,6 @@
 </head>
 <body>
 
-<!-- Navigation Bar -->
 <nav class="navbar">
     <div class="nav-container">
         <a href="index.php" class="nav-logo">CampusEvents</a>

@@ -9,7 +9,6 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
-// --- Event Detail View ---
 if (isset($_GET['view'])) {
     $event_id = mysqli_real_escape_string($conn, $_GET['view']);
     $result = mysqli_query($conn, "SELECT * FROM events WHERE id = '$event_id'");
@@ -62,12 +61,13 @@ if (isset($_GET['view'])) {
     exit();
 }
 
-// --- Dashboard View ---
 include 'includes/header.php';
 
 $search = isset($_GET['search']) ? mysqli_real_escape_string($conn, $_GET['search']) : "";
 $events_query = "SELECT * FROM events WHERE event_date >= CURDATE() ORDER BY event_date ASC";
-if ($search) $events_query = "SELECT * FROM events WHERE event_date >= CURDATE() AND (title LIKE '%$search%' OR category LIKE '%$search%') ORDER BY event_date ASC";
+if ($search) {
+    $events_query = "SELECT * FROM events WHERE event_date >= CURDATE() AND (title LIKE '%$search%' OR category LIKE '%$search%') ORDER BY event_date ASC";
+}
 $events_result = mysqli_query($conn, $events_query);
 
 $registered_result = mysqli_query($conn, "SELECT e.*, r.registered_at FROM registrations r JOIN events e ON r.event_id = e.id WHERE r.user_id = '$user_id' ORDER BY e.event_date ASC");

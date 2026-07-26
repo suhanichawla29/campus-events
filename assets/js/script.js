@@ -1,6 +1,3 @@
-// ===== Dark / Light Mode Toggle =====
-
-// Apply theme on page load
 (function() {
     var theme = localStorage.getItem("theme");
     var btn = document.getElementById("theme-btn");
@@ -25,7 +22,6 @@ function toggleTheme() {
     }
 }
 
-// Form validation for registration form
 function validateRegisterForm() {
     var name = document.getElementById("reg-name").value.trim();
     var email = document.getElementById("reg-email").value.trim();
@@ -55,7 +51,6 @@ function validateRegisterForm() {
     return true;
 }
 
-// Form validation for login form
 function validateLoginForm() {
     var email = document.getElementById("login-email").value.trim();
     var password = document.getElementById("login-password").value;
@@ -69,9 +64,4 @@ function validateLoginForm() {
         return false;
     }
     return true;
-}
-
-// Confirmation before deleting an event
-function confirmDelete(message) {
-    return confirm(message);
 }

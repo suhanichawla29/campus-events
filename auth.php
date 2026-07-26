@@ -12,7 +12,6 @@ if (isset($_SESSION['user_id'])) {
 $error = "";
 $success = "";
 
-// Handle login
 if ($action == 'login' && $_SERVER["REQUEST_METHOD"] == "POST") {
     $email = mysqli_real_escape_string($conn, $_POST['email']);
     $password = $_POST['password'];
@@ -30,7 +29,6 @@ if ($action == 'login' && $_SERVER["REQUEST_METHOD"] == "POST") {
     $error = "Invalid email or password!";
 }
 
-// Handle register
 if ($action == 'register' && $_SERVER["REQUEST_METHOD"] == "POST") {
     $full_name = mysqli_real_escape_string($conn, $_POST['full_name']);
     $email = mysqli_real_escape_string($conn, $_POST['email']);
