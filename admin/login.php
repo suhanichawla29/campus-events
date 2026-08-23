@@ -19,7 +19,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         header("Location: index.php");
         exit();
     } else {
-        $error = "Invalid admin username or password!";
+        $error = "Invalid admin username or password!!";
     }
 }
 ?>
