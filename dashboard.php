@@ -12,7 +12,6 @@ $user_id = $_SESSION['user_id'];
 if (isset($_GET['view'])) {
     $event_id = (int) $_GET['view'];
 
-    // Fetch the event together with its live registration count in ONE query.
     $event = null;
     $stmt = mysqli_prepare($conn, "SELECT e.*, COUNT(r.id) AS registered_count FROM events e LEFT JOIN registrations r ON r.event_id = e.id WHERE e.id = ? GROUP BY e.id");
     if ($stmt) {
@@ -24,7 +23,6 @@ if (isset($_GET['view'])) {
         mysqli_stmt_close($stmt);
     }
     if (!$event) {
-        // Event does not exist -> back to dashboard (existing behaviour).
         header("Location: dashboard.php");
         exit();
     }
@@ -41,15 +39,10 @@ if (isset($_GET['view'])) {
         mysqli_stmt_close($check);
     }
 
-    $reg_status = "";   // "" | "success" | "full" | "error"
+    $reg_status = "";
 
     if (isset($_POST['register_event']) && !$already_registered) {
 
-        // ---- Safe against overbooking / simultaneous requests -------------
-        // A transaction is opened and the event row is locked with
-        // SELECT ... FOR UPDATE. Every other registration attempt for the
-        // SAME event has to wait for that lock until we commit or roll
-        // back, so two users can never take the same last seat.
         if (mysqli_begin_transaction($conn)) {
             $committed = false;
 
@@ -63,7 +56,6 @@ if (isset($_GET['view'])) {
                         mysqli_stmt_fetch($lock);
                         $capacity = max(0, (int) $db_capacity);
 
-                        // Count current registrations while holding the lock.
                         $count_ok  = false;
                         $reg_count = 0;
                         $cnt = mysqli_prepare($conn, "SELECT COUNT(*) FROM registrations WHERE event_id = ?");
@@ -78,11 +70,9 @@ if (isset($_GET['view'])) {
                         }
 
                         if (!$count_ok) {
-                            // Count failed -> nothing is inserted.
                         } elseif ($capacity > 0 && $reg_count >= $capacity) {
-                            // Capacity reached -> no insert at all.
                             $reg_status = "full";
-                            $committed  = true;   // nothing changed; just release the lock
+                            $committed  = true;
                         } else {
                             $ins = mysqli_prepare($conn, "INSERT INTO registrations (user_id, event_id) VALUES (?, ?)");
                             if ($ins) {
@@ -92,8 +82,6 @@ if (isset($_GET['view'])) {
                                     $already_registered = true;
                                     $committed = true;
                                 } elseif (mysqli_stmt_errno($ins) == 1062) {
-                                    // Unique key (user_id, event_id) hit:
-                                    // duplicate form submission / double click.
                                     $already_registered = true;
                                     $committed = true;
                                 }
@@ -108,7 +96,6 @@ if (isset($_GET['view'])) {
             if ($committed) {
                 mysqli_commit($conn);
             } else {
-                // Any failure (query error, missing row...) rolls everything back.
                 mysqli_rollback($conn);
                 if ($reg_status == "") $reg_status = "error";
             }
@@ -116,7 +103,6 @@ if (isset($_GET['view'])) {
             $reg_status = "error";
         }
 
-        // Always refresh the live count so the page shows real numbers.
         $cnt2 = mysqli_prepare($conn, "SELECT COUNT(*) FROM registrations WHERE event_id = ?");
         if ($cnt2) {
             mysqli_stmt_bind_param($cnt2, "i", $event_id);
@@ -148,7 +134,6 @@ if (isset($_GET['view'])) {
         $reg_section = '<form method="POST"><button type="submit" name="register_event" class="btn btn-primary">Register for this Event</button></form>' . $reg_section;
     }
 
-    // Seat information component for the details page.
     if ($seats['unlimited']) {
         $seat_component = '<div class="seat-info status-available">'
             . '<div class="seat-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="36" height="36"><path d="M5 11V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v4"/><path d="M5 11a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2"/><path d="M6 18v2"/><path d="M18 18v2"/></svg></div>'
@@ -199,7 +184,6 @@ include 'includes/header.php';
 
 $search = isset($_GET['search']) ? trim($_GET['search']) : "";
 
-// One grouped query: events + live registration count (no queries in a loop).
 $events_sql = "SELECT e.*, COUNT(r.id) AS registered_count
                FROM events e
                LEFT JOIN registrations r ON r.event_id = e.id

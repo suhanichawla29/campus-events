@@ -10,7 +10,6 @@ include 'includes/header.php';
 
 $search = isset($_GET['search']) ? trim($_GET['search']) : "";
 
-// One grouped query: events + live registration count (no queries in a loop).
 $sql = "SELECT e.*, COUNT(r.id) AS registered_count
         FROM events e
         LEFT JOIN registrations r ON r.event_id = e.id

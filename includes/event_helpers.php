@@ -1,21 +1,5 @@
 <?php
-// ---------------------------------------------------------------
-// Event Capacity / Available Seats - shared helper functions.
-// Included by index.php and dashboard.php. Safe to include twice
-// because of include_once at the call sites.
-// ---------------------------------------------------------------
 
-/**
- * Work out all seat numbers + status for ONE event row.
- * $registered_count comes from COUNT() in the listing query,
- * $capacity from the events.capacity column.
- *
- * Rules:
- *   capacity <= 0 or missing  -> "open registration" (no limit)
- *   available > 10            -> green  "Seats Available"
- *   available 1..10           -> orange "Almost Full"
- *   available == 0            -> red    "Event Full"
- */
 function seat_data($registered_count, $capacity) {
     $registered_count = max(0, (int) $registered_count);
     $capacity         = (int) $capacity;
@@ -32,7 +16,6 @@ function seat_data($registered_count, $capacity) {
         );
     }
 
-    // Never negative, even if registrations accidentally exceed capacity.
     $available = max(0, $capacity - $registered_count);
     $percent   = min(100, (int) round(($registered_count / $capacity) * 100));
 
@@ -58,11 +41,6 @@ function seat_data($registered_count, $capacity) {
     );
 }
 
-/**
- * Compact capacity block used on the small EVENT CARDS
- * (home page + dashboard). Shows seats left, status badge,
- * progress bar and a filled/total summary line.
- */
 function event_capacity_html($registered_count, $capacity) {
     $s = seat_data($registered_count, $capacity);
 
