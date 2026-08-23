@@ -14,7 +14,7 @@ if (!isset($_SESSION['admin_id']) && $_SERVER["REQUEST_METHOD"] == "POST") {
         $_SESSION['admin_id'] = $admin['id'];
         $_SESSION['admin_username'] = $admin['username'];
     } else {
-        $error = "Invalid admin username or password!!";
+        $error = "Invalid admin username or password!";
     }
 }
 

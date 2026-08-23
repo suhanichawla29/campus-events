@@ -7,43 +7,31 @@ if (isset($_GET['logout'])) {
 }
 include 'includes/config.php';
 include 'includes/header.php';
+include_once 'includes/event_helpers.php';
 
-$search = isset($_GET['search']) ? trim($_GET['search']) : "";
+$search = "";
+if (isset($_GET['search'])) {
+    $search = trim($_GET['search']);
+}
 
 $sql = "SELECT e.*, COUNT(r.id) AS registered_count
         FROM events e
         LEFT JOIN registrations r ON r.event_id = e.id
         WHERE e.event_date >= CURDATE()";
-if ($search !== "") {
+
+if ($search != "") {
     $sql .= " AND (e.title LIKE ? OR e.description LIKE ? OR e.category LIKE ?)";
 }
+
 $sql .= " GROUP BY e.id ORDER BY e.event_date ASC LIMIT 6";
 
-$result = false;
 $stmt = mysqli_prepare($conn, $sql);
-if ($stmt) {
-    if ($search !== "") {
-        $like = "%" . $search . "%";
-        mysqli_stmt_bind_param($stmt, "sss", $like, $like, $like);
-    }
-    if (mysqli_stmt_execute($stmt)) {
-        $result = mysqli_stmt_get_result($stmt);
-    }
+if ($search != "") {
+    $like = "%" . $search . "%";
+    mysqli_stmt_bind_param($stmt, "sss", $like, $like, $like);
 }
-
-include_once 'includes/event_helpers.php';
-
-$events_html = "";
-if ($result && mysqli_num_rows($result) > 0) {
-    while ($ev = mysqli_fetch_assoc($result)) {
-        $img = $ev['image'] ? "uploads/" . $ev['image'] : "assets/images/default-event.jpg";
-        $events_html .= '<div class="event-card"><img src="' . $img . '" alt="' . htmlspecialchars($ev['title']) . '" class="event-card-img"><div class="event-card-body"><h3>' . htmlspecialchars($ev['title']) . '</h3><p class="event-date">' . date("d M Y", strtotime($ev['event_date'])) . ' at ' . date("h:i A", strtotime($ev['event_time'])) . '</p><p><strong>Venue:</strong> ' . htmlspecialchars($ev['venue']) . '</p><p><strong>Category:</strong> ' . htmlspecialchars($ev['category']) . '</p>'
-            . event_capacity_html(isset($ev['registered_count']) ? $ev['registered_count'] : 0, isset($ev['capacity']) ? $ev['capacity'] : 0)
-            . '<a href="dashboard.php?view=' . (int) $ev['id'] . '" class="btn btn-small">View Details</a></div></div>';
-    }
-} else {
-    $events_html = '<p class="no-events">No upcoming events at the moment. Check back later!</p>';
-}
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
 ?>
 
 <section class="hero">
@@ -68,7 +56,40 @@ if ($result && mysqli_num_rows($result) > 0) {
 
 <section class="events-section">
     <h2>Upcoming Events</h2>
-    <div class="event-grid"><?= $events_html ?></div>
+    <div class="event-grid">
+
+        <?php if ($result && mysqli_num_rows($result) > 0) { ?>
+            <?php while ($ev = mysqli_fetch_assoc($result)) { ?>
+                <?php
+                    $img = $ev['image'] ? "uploads/" . $ev['image'] : "assets/images/default-event.jpg";
+                    $seat = get_seat_info($ev['registered_count'], isset($ev['capacity']) ? $ev['capacity'] : 0);
+                ?>
+
+                <div class="event-card">
+                    <img src="<?= $img ?>" alt="<?= htmlspecialchars($ev['title']) ?>" class="event-card-img">
+
+                    <div class="event-card-body">
+                        <h3><?= htmlspecialchars($ev['title']) ?></h3>
+
+                        <p class="event-date">
+                            <?= date("d M Y", strtotime($ev['event_date'])) ?> at <?= date("h:i A", strtotime($ev['event_time'])) ?>
+                        </p>
+
+                        <p><strong>Venue:</strong> <?= htmlspecialchars($ev['venue']) ?></p>
+                        <p><strong>Category:</strong> <?= htmlspecialchars($ev['category']) ?></p>
+
+                        <?= capacity_html($seat) ?>
+
+                        <a href="dashboard.php?view=<?= (int)$ev['id'] ?>" class="btn btn-small">View Details</a>
+                    </div>
+                </div>
+
+            <?php } ?>
+        <?php } else { ?>
+            <p class="no-events">No upcoming events at the moment. Check back later!</p>
+        <?php } ?>
+
+    </div>
 </section>
 
 <?php include 'includes/footer.php'; ?>

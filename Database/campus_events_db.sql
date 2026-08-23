@@ -2,6 +2,12 @@
 START TRANSACTION;
 SET time_zone = "+00:00";
 
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
 CREATE TABLE `admins` (
   `id` int(11) NOT NULL,
   `username` varchar(50) NOT NULL,
@@ -22,16 +28,17 @@ CREATE TABLE `events` (
   `category` varchar(100) DEFAULT NULL,
   `organizer` varchar(100) DEFAULT NULL,
   `image` varchar(255) DEFAULT NULL,
+  `capacity` int(10) unsigned NOT NULL DEFAULT 50,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-INSERT INTO `events` (`id`, `title`, `description`, `event_date`, `event_time`, `venue`, `category`, `organizer`, `image`, `created_at`) VALUES
-(1, 'Tech Hackathon 2026', 'A 24-hour coding competition where students build innovative solutions.', '2027-01-07', '09:00:00', 'Computer Science Block', 'Technical', 'CS Department', '1783608297_Hackathon.jpg', '2026-07-09 08:31:06'),
-(2, 'Pravah', 'Showcase your talent in music, dance, drama, and more!', '2026-08-29', '10:00:00', 'College Auditorium', 'Cultural', 'Cultural Committee', '1783612939_pravah.jpg', '2026-07-09 08:31:06'),
-(3, 'AI Workshop', 'Learn the basics of Artificial Intelligence and Machine Learning.', '2026-07-30', '14:00:00', 'Lab 301', 'Workshop', 'AI Club', '1783613461_workshop.jpg', '2026-07-09 08:31:06'),
-(4, 'Dance Revolution', 'Solo and group dance battles', '2027-03-08', '11:00:00', 'Auditorium', 'Cultural', 'Dance Club', '1783609191_dance-battle.jpg', '2026-07-09 13:14:14'),
-(5, 'Sports Meet 2026', 'Annual sports competition with cricket, football, basketball and more.', '2026-09-11', '08:00:00', 'College Sports Ground', 'Sports', 'Sports Department', '1783613070_sports.jpg', '2026-07-09 13:14:14'),
-(6, 'Startup Pitch Competition', 'Present your startup idea to a panel of judges and win funding.', '2026-11-05', '13:00:00', 'Seminar Hall', 'Seminar', 'Entrepreneurship Cell', '1783613396_startup.jpg', '2026-07-09 13:14:14');
+INSERT INTO `events` (`id`, `title`, `description`, `event_date`, `event_time`, `venue`, `category`, `organizer`, `image`, `capacity`, `created_at`) VALUES
+(1, 'Tech Hackathon 2026', 'A 24-hour coding competition where students build innovative solutions.', '2027-01-07', '09:00:00', 'Computer Science Block', 'Technical', 'CS Department', '1783608297_Hackathon.jpg', 50, '2026-07-09 08:31:06'),
+(2, 'Pravah', 'Showcase your talent in music, dance, drama, and more!', '2026-08-29', '10:00:00', 'College Auditorium', 'Cultural', 'Cultural Committee', '1783612939_pravah.jpg', 50, '2026-07-09 08:31:06'),
+(3, 'AI Workshop', 'Learn the basics of Artificial Intelligence and Machine Learning.', '2026-07-30', '14:00:00', 'Lab 301', 'Workshop', 'AI Club', '1783613461_workshop.jpg', 50, '2026-07-09 08:31:06'),
+(4, 'Dance Revolution', 'Solo and group dance battles', '2027-03-08', '11:00:00', 'Auditorium', 'Cultural', 'Dance Club', '1783609191_dance-battle.jpg', 50, '2026-07-09 13:14:14'),
+(5, 'Sports Meet 2026', 'Annual sports competition with cricket, football, basketball and more.', '2026-09-11', '08:00:00', 'College Sports Ground', 'Sports', 'Sports Department', '1783613070_sports.jpg', 50, '2026-07-09 13:14:14'),
+(6, 'Startup Pitch Competition', 'Present your startup idea to a panel of judges and win funding.', '2026-11-05', '13:00:00', 'Seminar Hall', 'Seminar', 'Entrepreneurship Cell', '1783613396_startup.jpg', 50, '2026-07-09 13:14:14');
 
 CREATE TABLE `registrations` (
   `id` int(11) NOT NULL,
@@ -89,4 +96,7 @@ ALTER TABLE `registrations`
   ADD CONSTRAINT `registrations_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `registrations_ibfk_2` FOREIGN KEY (`event_id`) REFERENCES `events` (`id`) ON DELETE CASCADE;
 COMMIT;
-=
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
