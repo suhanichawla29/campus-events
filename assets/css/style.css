@@ -635,3 +635,183 @@ body.dark-mode .admin-nav { background: linear-gradient(135deg, #0f0f1a, #1a1a2e
     .event-detail { padding: 20px; }
     .admin-form { padding: 20px; }
 }
+
+/* ============================================================
+   Event Capacity & Available Seats
+   ============================================================ */
+
+.capacity-info {
+    --cap-track: #f6e3ec;
+    margin-top: 12px;
+    margin-bottom: 4px;
+}
+
+body.dark-mode .capacity-info,
+body.dark-mode .seat-info {
+    --cap-track: rgba(255, 255, 255, 0.09);
+}
+
+.capacity-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.seats-left {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.capacity-summary {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 5px !important;
+    margin-bottom: 0 !important;
+}
+
+/* --- Status badges (soft background, dark readable text) --- */
+.status-badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 50px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.status-available {
+    background: #e3f4e8;
+    color: #1e6f38;
+}
+
+.status-almost-full {
+    background: #fdf0dd;
+    color: #8f5606;
+}
+
+.status-full {
+    background: #fce8e8;
+    color: #9c2626;
+}
+
+body.dark-mode .status-available { background: #16301f; color: #86dba2; }
+body.dark-mode .status-almost-full { background: #33270f; color: #efc07a; }
+body.dark-mode .status-full { background: #361717; color: #f19c9c; }
+
+/* --- Progress bars --- */
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--cap-track);
+    overflow: hidden;
+    margin-top: 8px;
+}
+
+.progress-bar .progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.5s ease;
+}
+
+.status-available .progress-fill { background-color: #58b87b; }
+.status-almost-full .progress-fill { background-color: #efa64d; }
+.status-full .progress-fill { background-color: #e06666; }
+
+body.dark-mode .status-available .progress-fill { background-color: #4ea370; }
+body.dark-mode .status-almost-full .progress-fill { background-color: #cf9142; }
+body.dark-mode .status-full .progress-fill { background-color: #c25b5b; }
+
+.progress-lg { height: 12px; margin-top: 10px; }
+
+/* --- Seat info component (event details page) --- */
+.seat-info {
+    --cap-track: #f6e3ec;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin: 22px 0;
+}
+
+.seat-icon {
+    flex-shrink: 0;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: color 0.3s ease;
+}
+
+.status-available .seat-icon { color: #1e6f38; background: #e3f4e8; }
+.status-almost-full .seat-icon { color: #8f5606; background: #fdf0dd; }
+.status-full .seat-icon { color: #9c2626; background: #fce8e8; }
+
+body.dark-mode .status-available .seat-icon { color: #86dba2; background: #16301f; }
+body.dark-mode .status-almost-full .seat-icon { color: #efc07a; background: #33270f; }
+body.dark-mode .status-full .seat-icon { color: #f19c9c; background: #361717; }
+
+.seat-details { flex: 1; min-width: 0; }
+
+.seat-headline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.seat-filled {
+    font-size: 16px;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.seat-filled strong { font-size: 18px; }
+
+.seat-remaining {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.seat-percent {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-top: 6px;
+    text-align: right;
+}
+
+/* --- Disabled "Event Full" button --- */
+.btn-disabled,
+.btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.btn:disabled:hover,
+.btn-disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+/* --- Responsive tweaks for the capacity UI --- */
+@media (max-width: 480px) {
+    .seat-info { flex-direction: column; gap: 12px; }
+    .seat-icon { width: 46px; height: 46px; }
+    .capacity-top { flex-direction: column; align-items: flex-start; gap: 5px; }
+    .seats-left { font-size: 12px; }
+    .seat-filled strong { font-size: 16px; }
+}

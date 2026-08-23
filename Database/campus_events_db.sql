@@ -1,31 +1,8 @@
--- phpMyAdmin SQL Dump
--- version 5.2.1
--- https://www.phpmyadmin.net/
---
--- Host: 127.0.0.1
--- Generation Time: Jul 26, 2026 at 08:45 AM
--- Server version: 10.4.32-MariaDB
--- PHP Version: 8.2.12
-
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
 
 
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8mb4 */;
-
---
--- Database: `campus_events_db`
---
-
--- --------------------------------------------------------
-
---
--- Table structure for table `admins`
---
 
 CREATE TABLE `admins` (
   `id` int(11) NOT NULL,
@@ -34,18 +11,10 @@ CREATE TABLE `admins` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `admins`
---
 
 INSERT INTO `admins` (`id`, `username`, `password`, `created_at`) VALUES
 (1, 'admin', '0192023a7bbd73250516f069df18b500', '2026-07-09 08:31:06');
 
--- --------------------------------------------------------
-
---
--- Table structure for table `events`
---
 
 CREATE TABLE `events` (
   `id` int(11) NOT NULL,
@@ -60,9 +29,7 @@ CREATE TABLE `events` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `events`
---
+
 
 INSERT INTO `events` (`id`, `title`, `description`, `event_date`, `event_time`, `venue`, `category`, `organizer`, `image`, `created_at`) VALUES
 (1, 'Tech Hackathon 2026', 'A 24-hour coding competition where students build innovative solutions.', '2027-01-07', '09:00:00', 'Computer Science Block', 'Technical', 'CS Department', '1783608297_Hackathon.jpg', '2026-07-09 08:31:06'),
@@ -72,11 +39,7 @@ INSERT INTO `events` (`id`, `title`, `description`, `event_date`, `event_time`, 
 (5, 'Sports Meet 2026', 'Annual sports competition with cricket, football, basketball and more.', '2026-09-11', '08:00:00', 'College Sports Ground', 'Sports', 'Sports Department', '1783613070_sports.jpg', '2026-07-09 13:14:14'),
 (6, 'Startup Pitch Competition', 'Present your startup idea to a panel of judges and win funding.', '2026-11-05', '13:00:00', 'Seminar Hall', 'Seminar', 'Entrepreneurship Cell', '1783613396_startup.jpg', '2026-07-09 13:14:14');
 
--- --------------------------------------------------------
 
---
--- Table structure for table `registrations`
---
 
 CREATE TABLE `registrations` (
   `id` int(11) NOT NULL,
@@ -85,19 +48,12 @@ CREATE TABLE `registrations` (
   `registered_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `registrations`
---
 
 INSERT INTO `registrations` (`id`, `user_id`, `event_id`, `registered_at`) VALUES
 (1, 1, 4, '2026-07-09 16:15:23'),
 (2, 1, 3, '2026-07-11 04:35:46');
 
--- --------------------------------------------------------
 
---
--- Table structure for table `users`
---
 
 CREATE TABLE `users` (
   `id` int(11) NOT NULL,
@@ -108,86 +64,50 @@ CREATE TABLE `users` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `users`
---
+
 
 INSERT INTO `users` (`id`, `full_name`, `email`, `password`, `phone`, `created_at`) VALUES
 (1, 'Suhani', 'suhanichawla47@gmail.com', '$2y$10$XqYCum4x0dqtHHEXDaSP/uA.1vKIbJJ2LldigExcpeiIn1F7IVp..', '8824758482', '2026-07-09 08:33:31'),
 (2, 'Suhaniiii', 'suhaniashishchawla8542@gmail.com', '$2y$10$YZ1sT0OOgiQJznIgq/z2F.aId5fSLu4JPG/o5AUtw8y63jwZZehNO', '8824758482', '2026-07-26 06:43:37');
 
---
--- Indexes for dumped tables
---
 
---
--- Indexes for table `admins`
---
 ALTER TABLE `admins`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `username` (`username`);
 
---
--- Indexes for table `events`
---
+
 ALTER TABLE `events`
   ADD PRIMARY KEY (`id`);
 
---
--- Indexes for table `registrations`
---
+
 ALTER TABLE `registrations`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `unique_registration` (`user_id`,`event_id`),
   ADD KEY `event_id` (`event_id`);
 
---
--- Indexes for table `users`
---
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `email` (`email`);
 
---
--- AUTO_INCREMENT for dumped tables
---
 
---
--- AUTO_INCREMENT for table `admins`
---
 ALTER TABLE `admins`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
---
--- AUTO_INCREMENT for table `events`
---
+
 ALTER TABLE `events`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
---
--- AUTO_INCREMENT for table `registrations`
---
+
 ALTER TABLE `registrations`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
---
--- AUTO_INCREMENT for table `users`
---
+
 ALTER TABLE `users`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
---
--- Constraints for dumped tables
---
 
---
--- Constraints for table `registrations`
---
 ALTER TABLE `registrations`
   ADD CONSTRAINT `registrations_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `registrations_ibfk_2` FOREIGN KEY (`event_id`) REFERENCES `events` (`id`) ON DELETE CASCADE;
 COMMIT;
-
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+=

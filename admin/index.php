@@ -59,7 +59,13 @@ if (isset($_POST['add_event'])) {
             move_uploaded_file($_FILES['image']['tmp_name'], "../uploads/" . $image);
         } else { $image = ""; }
     }
-    if (mysqli_query($conn, "INSERT INTO events (title, description, event_date, event_time, venue, category, organizer, image) VALUES ('$title','$description','$event_date','$event_time','$venue','$category','$organizer','$image')")) $message = "added";
+    $capacity = max(0, (int) $_POST['capacity']);
+    $stmt = mysqli_prepare($conn, "INSERT INTO events (title, description, event_date, event_time, venue, category, organizer, image, capacity) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "ssssssssi", $title, $description, $event_date, $event_time, $venue, $category, $organizer, $image, $capacity);
+        if (mysqli_stmt_execute($stmt)) $message = "added";
+        mysqli_stmt_close($stmt);
+    }
 }
 
 if (isset($_POST['edit_event'])) {
@@ -81,7 +87,13 @@ if (isset($_POST['edit_event'])) {
             move_uploaded_file($_FILES['image']['tmp_name'], "../uploads/" . $image);
         } else { $image = $image_row['image']; }
     }
-    if (mysqli_query($conn, "UPDATE events SET title='$title',description='$description',event_date='$event_date',event_time='$event_time',venue='$venue',category='$category',organizer='$organizer',image='$image' WHERE id='$event_id'")) $message = "updated";
+    $capacity = max(0, (int) $_POST['capacity']);
+    $stmt = mysqli_prepare($conn, "UPDATE events SET title=?, description=?, event_date=?, event_time=?, venue=?, category=?, organizer=?, image=?, capacity=? WHERE id=?");
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "ssssssssii", $title, $description, $event_date, $event_time, $venue, $category, $organizer, $image, $capacity, $event_id);
+        if (mysqli_stmt_execute($stmt)) $message = "updated";
+        mysqli_stmt_close($stmt);
+    }
 }
 
 if (isset($_GET['delete'])) {
@@ -93,7 +105,7 @@ if (isset($_GET['delete'])) {
     exit();
 }
 
-$events_result = mysqli_query($conn, "SELECT * FROM events ORDER BY event_date ASC");
+$events_result = mysqli_query($conn, "SELECT e.*, COUNT(r.id) AS registered_count FROM events e LEFT JOIN registrations r ON r.event_id = e.id GROUP BY e.id ORDER BY e.event_date ASC");
 $total_events = mysqli_num_rows($events_result);
 $total_users = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM users"))['c'];
 $total_regs = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM registrations"))['c'];
@@ -112,7 +124,9 @@ elseif ($message == "deleted") $message_text = "Event deleted successfully!";
 
 $table_rows = "";
 while ($ev = mysqli_fetch_assoc($events_result)) {
-    $table_rows .= '<tr><td>' . $ev['id'] . '</td><td>' . $ev['title'] . '</td><td>' . date("d M Y",strtotime($ev['event_date'])) . '</td><td>' . date("h:i A",strtotime($ev['event_time'])) . '</td><td>' . $ev['venue'] . '</td><td>' . $ev['category'] . '</td><td class="actions"><a href="index.php?edit=' . $ev['id'] . '" class="btn btn-small btn-edit">Edit</a> <a href="index.php?delete=' . $ev['id'] . '" class="btn btn-small btn-delete" onclick="return confirm(\'Are you sure?\')">Delete</a></td></tr>';
+    $cap = isset($ev['capacity']) ? (int) $ev['capacity'] : 0;
+    $seats_cell = ($cap > 0) ? (int) $ev['registered_count'] . ' / ' . $cap : (int) $ev['registered_count'] . ' / &infin;';
+    $table_rows .= '<tr><td>' . $ev['id'] . '</td><td>' . $ev['title'] . '</td><td>' . date("d M Y",strtotime($ev['event_date'])) . '</td><td>' . date("h:i A",strtotime($ev['event_time'])) . '</td><td>' . $ev['venue'] . '</td><td>' . $ev['category'] . '</td><td>' . $seats_cell . '</td><td class="actions"><a href="index.php?edit=' . $ev['id'] . '" class="btn btn-small btn-edit">Edit</a> <a href="index.php?delete=' . $ev['id'] . '" class="btn btn-small btn-delete" onclick="return confirm(\'Are you sure?\')">Delete</a></td></tr>';
 }
 $categories = array('Technical','Cultural','Sports','Workshop','Seminar','Other');
 function categoryOptions($categories, $selected = "") {
@@ -161,7 +175,7 @@ function categoryOptions($categories, $selected = "") {
             <div class="form-row"><div class="form-group"><label>Date</label><input type="date" name="event_date" required></div><div class="form-group"><label>Time</label><input type="time" name="event_time"></div></div>
             <div class="form-group"><label>Venue</label><input type="text" name="venue"></div>
             <div class="form-group"><label>Category</label><select name="category"><?= categoryOptions($categories) ?></select></div>
-            <div class="form-group"><label>Organizer</label><input type="text" name="organizer"></div>
+            <div class="form-row"><div class="form-group"><label>Organizer</label><input type="text" name="organizer"></div><div class="form-group"><label>Seat Capacity</label><input type="number" name="capacity" min="0" max="100000" value="50"><p class="current-image">Total seats available (0 = no limit)</p></div></div>
             <div class="form-group"><label>Event Image</label><input type="file" name="image"></div>
             <button type="submit" name="add_event" class="btn btn-primary">Add Event</button>
             <a href="index.php" class="btn btn-secondary">Cancel</a>
@@ -178,7 +192,7 @@ function categoryOptions($categories, $selected = "") {
             <div class="form-row"><div class="form-group"><label>Date</label><input type="date" name="event_date" value="<?= $edit_event['event_date'] ?>" required></div><div class="form-group"><label>Time</label><input type="time" name="event_time" value="<?= $edit_event['event_time'] ?>"></div></div>
             <div class="form-group"><label>Venue</label><input type="text" name="venue" value="<?= $edit_event['venue'] ?>"></div>
             <div class="form-group"><label>Category</label><select name="category"><?= categoryOptions($categories, $edit_event['category']) ?></select></div>
-            <div class="form-group"><label>Organizer</label><input type="text" name="organizer" value="<?= $edit_event['organizer'] ?>"></div>
+            <div class="form-row"><div class="form-group"><label>Organizer</label><input type="text" name="organizer" value="<?= $edit_event['organizer'] ?>"></div><div class="form-group"><label>Seat Capacity</label><input type="number" name="capacity" min="0" max="100000" value="<?= isset($edit_event['capacity']) ? (int) $edit_event['capacity'] : 0 ?>"><p class="current-image">Total seats available (0 = no limit)</p></div></div>
             <div class="form-group"><label>Event Image</label><input type="file" name="image"><?php if ($edit_event['image']): ?><p class="current-image">Current: <?= $edit_event['image'] ?></p><?php endif; ?></div>
             <button type="submit" name="edit_event" class="btn btn-primary">Update Event</button>
             <a href="index.php" class="btn btn-secondary">Cancel</a>
@@ -186,7 +200,7 @@ function categoryOptions($categories, $selected = "") {
     </div>
     <?php endif; ?>
     <table class="table admin-table">
-        <tr><th>ID</th><th>Title</th><th>Date</th><th>Time</th><th>Venue</th><th>Category</th><th>Actions</th></tr>
+        <tr><th>ID</th><th>Title</th><th>Date</th><th>Time</th><th>Venue</th><th>Category</th><th>Seats (Registered / Capacity)</th><th>Actions</th></tr>
         <?= $table_rows ?>
     </table>
 </div>
