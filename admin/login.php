@@ -1,6 +1,6 @@
 <?php
 session_start();
-include '../config.php';
+include '../includes/config.php';
 
 if (isset($_SESSION['admin_id'])) {
     header("Location: index.php");
@@ -29,7 +29,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login - Campus Events</title>
-    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
 <div class="admin-login-wrapper">
