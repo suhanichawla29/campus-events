@@ -1,5 +1,4 @@
-<?php
-// Start the session and check that the student is logged in
+﻿<?php
 session_start();
 include 'includes/config.php';
 include_once 'includes/event_helpers.php';
@@ -11,19 +10,15 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
-// Keep any success or error message from the previous action
 $_SESSION['flash'] = isset($_SESSION['flash']) ? $_SESSION['flash'] : array();
 
-// Cancel the student's registration (sent from the confirmation modal)
 if (isset($_POST['cancel_registration'])) {
     $result = "error";
 
-    // Only continue if the hidden CSRF token is correct
     if (check_csrf()) {
         $event_id = isset($_POST['event_id']) ? (int)$_POST['event_id'] : 0;
 
         if ($event_id > 0) {
-            // Find the event the student wants to cancel
             $stmt = mysqli_prepare($conn, "SELECT id, title, event_date, event_time FROM events WHERE id = ?");
             $event = null;
             if ($stmt) {
@@ -38,12 +33,10 @@ if (isset($_POST['cancel_registration'])) {
             if (!$event) {
                 $result = "invalid";
             } else {
-                // Check whether the event has already started
                 $now = time();
                 $start = strtotime($event['event_date'] . " " . ($event['event_time'] ? $event['event_time'] : "00:00:00"));
                 $started = $start > 0 && $now >= $start;
 
-                // Check that the student is registered for this event
                 $owns_registration = false;
                 $check_registration = mysqli_prepare($conn, "SELECT id FROM registrations WHERE user_id = ? AND event_id = ?");
                 if ($check_registration) {
@@ -59,7 +52,6 @@ if (isset($_POST['cancel_registration'])) {
                 } else if ($started) {
                     $result = "closed";
                 } else {
-                    // Delete only this student's registration for this event
                     $delete_registration = mysqli_prepare($conn, "DELETE FROM registrations WHERE user_id = ? AND event_id = ?");
                     if ($delete_registration) {
                         mysqli_stmt_bind_param($delete_registration, "ii", $user_id, $event_id);
@@ -76,16 +68,13 @@ if (isset($_POST['cancel_registration'])) {
 
     $_SESSION['flash']['type'] = $result;
 
-    // Redirect after the POST so the page cannot be refreshed twice
     header("Location: dashboard.php");
     exit();
 }
 
-// Show the full details of one event
 if (isset($_GET['view'])) {
     $event_id = (int)$_GET['view'];
 
-    // Find the event and count how many students have registered for it
     $stmt = mysqli_prepare($conn, "SELECT e.*, COUNT(r.id) AS registered_count
                                    FROM events e
                                    LEFT JOIN registrations r ON r.event_id = e.id
@@ -101,13 +90,11 @@ if (isset($_GET['view'])) {
         mysqli_stmt_close($stmt);
     }
 
-    // If the event does not exist, go back to the dashboard
     if (!$event) {
         header("Location: dashboard.php");
         exit();
     }
 
-    // Check whether this student is already registered for the event
     $already_registered = false;
     $check_registration = mysqli_prepare($conn, "SELECT id FROM registrations WHERE user_id = ? AND event_id = ?");
     if ($check_registration) {
@@ -122,11 +109,9 @@ if (isset($_GET['view'])) {
 
     $message = "";
 
-    // Register this student for the event (sent from the Register button)
     if (isset($_POST['register_event']) && !$already_registered) {
         $done = false;
 
-        // Lock the event row so two students cannot take the last seat at once
         mysqli_begin_transaction($conn);
 
         $lock_statement = mysqli_prepare($conn, "SELECT capacity FROM events WHERE id = ? FOR UPDATE");
@@ -143,7 +128,6 @@ if (isset($_GET['view'])) {
                 $current_registrations = 0;
                 $count_ok = false;
 
-                // Count how many students have already registered
                 $count_statement = mysqli_prepare($conn, "SELECT COUNT(*) FROM registrations WHERE event_id = ?");
                 if ($count_statement) {
                     mysqli_stmt_bind_param($count_statement, "i", $event_id);
@@ -158,11 +142,9 @@ if (isset($_GET['view'])) {
                 if (!$count_ok) {
                     $done = false;
                 } else if ($capacity > 0 && $current_registrations >= $capacity) {
-                    // The event is full, so registration is closed
                     $message = "full";
                     $done = true;
                 } else {
-                    // Save the new registration
                     $insert_statement = mysqli_prepare($conn, "INSERT INTO registrations (user_id, event_id) VALUES (?, ?)");
                     if ($insert_statement) {
                         mysqli_stmt_bind_param($insert_statement, "ii", $user_id, $event_id);
@@ -172,7 +154,6 @@ if (isset($_GET['view'])) {
                             $already_registered = true;
                             $done = true;
                         } else if (mysqli_stmt_errno($insert_statement) == 1062) {
-                            // The same student tried to register twice at the same moment
                             $already_registered = true;
                             $done = true;
                         }
@@ -193,7 +174,6 @@ if (isset($_GET['view'])) {
             }
         }
 
-        // Get the fresh registration count so the seats update on the page
         $fresh_count = mysqli_prepare($conn, "SELECT COUNT(*) FROM registrations WHERE event_id = ?");
         if ($fresh_count) {
             mysqli_stmt_bind_param($fresh_count, "i", $event_id);
@@ -207,7 +187,6 @@ if (isset($_GET['view'])) {
         }
     }
 
-    // Work out the seat numbers and full/available status
     $seat = get_seat_info(isset($event['registered_count']) ? $event['registered_count'] : 0,
                           isset($event['capacity']) ? $event['capacity'] : 0);
     $is_full = (!$seat['unlimited'] && $seat['available'] == 0);
@@ -329,7 +308,6 @@ if (isset($_GET['search'])) {
     $search = trim($_GET['search']);
 }
 
-// Find upcoming events, optionally matching the search term
 $query = "SELECT e.*, COUNT(r.id) AS registered_count
           FROM events e
           LEFT JOIN registrations r ON r.event_id = e.id
@@ -349,7 +327,6 @@ if ($search != "") {
 mysqli_stmt_execute($stmt);
 $events_result = mysqli_stmt_get_result($stmt);
 
-// Find the events this student has registered for
 $my_events_result = false;
 $my_events_stmt = mysqli_prepare($conn, "SELECT e.*, r.registered_at
                                          FROM registrations r
@@ -369,7 +346,6 @@ if ($my_events_stmt) {
     <h2>Welcome, <?= $_SESSION['user_name'] ?>!</h2>
 
     <?php
-        // Show the message left after the last cancellation attempt
         $flash_type  = isset($_SESSION['flash']['type']) ? $_SESSION['flash']['type'] : "";
         $flash_title = isset($_SESSION['flash']['title']) ? $_SESSION['flash']['title'] : "";
 

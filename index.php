@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 if (isset($_GET['logout'])) {
     session_destroy();
@@ -14,7 +14,6 @@ if (isset($_GET['search'])) {
     $search = trim($_GET['search']);
 }
 
-// Find upcoming events, optionally matching the search term
 $query = "SELECT e.*, COUNT(r.id) AS registered_count
           FROM events e
           LEFT JOIN registrations r ON r.event_id = e.id

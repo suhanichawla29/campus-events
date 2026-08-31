@@ -1,11 +1,9 @@
-<?php
-// Start a session so we can remember the logged-in student
+﻿<?php
 session_start();
 include 'includes/config.php';
 
 $action = isset($_GET['action']) ? $_GET['action'] : 'login';
 
-// If the student is already logged in, send them to the dashboard
 if (isset($_SESSION['user_id'])) {
     header("Location: dashboard.php");
     exit();
@@ -14,12 +12,10 @@ if (isset($_SESSION['user_id'])) {
 $error = "";
 $success = "";
 
-// Log in an existing student
 if ($action == 'login' && $_SERVER["REQUEST_METHOD"] == "POST") {
     $email = $_POST['email'];
     $password = $_POST['password'];
 
-    // Find the student with this email
     $stmt = mysqli_prepare($conn, "SELECT id, full_name, email, password FROM users WHERE email = ?");
     mysqli_stmt_bind_param($stmt, "s", $email);
     mysqli_stmt_execute($stmt);
@@ -28,7 +24,6 @@ if ($action == 'login' && $_SERVER["REQUEST_METHOD"] == "POST") {
     if (mysqli_num_rows($result) == 1) {
         $user = mysqli_fetch_assoc($result);
 
-        // Check the password only if the email matched a student
         if (password_verify($password, $user['password'])) {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_name'] = $user['full_name'];
@@ -41,7 +36,6 @@ if ($action == 'login' && $_SERVER["REQUEST_METHOD"] == "POST") {
     $error = "Invalid email or password!";
 }
 
-// Register a new student
 if ($action == 'register' && $_SERVER["REQUEST_METHOD"] == "POST") {
     $full_name = $_POST['full_name'];
     $email = $_POST['email'];
@@ -52,7 +46,6 @@ if ($action == 'register' && $_SERVER["REQUEST_METHOD"] == "POST") {
     if ($password !== $confirm) {
         $error = "Passwords do not match!";
     } else {
-        // Do not allow two students to use the same email
         $check = mysqli_prepare($conn, "SELECT id FROM users WHERE email = ?");
         mysqli_stmt_bind_param($check, "s", $email);
         mysqli_stmt_execute($check);
@@ -61,7 +54,6 @@ if ($action == 'register' && $_SERVER["REQUEST_METHOD"] == "POST") {
         if (mysqli_stmt_num_rows($check) > 0) {
             $error = "Email already registered! Please login.";
         } else {
-            // Save the student with a hashed password
             $hashed = password_hash($password, PASSWORD_DEFAULT);
             $insert = mysqli_prepare($conn, "INSERT INTO users (full_name, email, phone, password) VALUES (?, ?, ?, ?)");
             mysqli_stmt_bind_param($insert, "ssss", $full_name, $email, $phone, $hashed);
