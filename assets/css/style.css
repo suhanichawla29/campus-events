@@ -806,3 +806,198 @@ body.dark-mode .status-full .seat-icon { color: #f19c9c; background: #361717; }
     .seats-left { font-size: 12px; }
     .seat-filled strong { font-size: 16px; }
 }
+
+/* ============================================================
+   Registration Cancellation
+   ============================================================ */
+
+.btn-cancel {
+    background: transparent;
+    border: 2px solid #d06060;
+    color: #a53838;
+    padding: 7px 16px;
+    font-size: 13px;
+    border-radius: 50px;
+    font-weight: 600;
+    box-shadow: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+}
+
+.btn-cancel:hover,
+.btn-cancel:focus-visible {
+    background-color: #fdecec;
+    border-color: #b84a4a;
+    color: #8f2626;
+    transform: translateY(-2px);
+    box-shadow: none;
+}
+
+.btn-cancel:focus-visible {
+    outline: 3px solid rgba(176, 66, 66, 0.35);
+    outline-offset: 2px;
+}
+
+.btn-cancel-disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.btn-cancel-disabled:hover,
+.btn-cancel-disabled:focus-visible {
+    transform: none;
+    background-color: transparent;
+}
+
+.cancel-closed-note {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+body.dark-mode .btn-cancel {
+    border-color: #c06262;
+    color: #f0b0b0;
+}
+
+body.dark-mode .btn-cancel:hover,
+body.dark-mode .btn-cancel:focus-visible {
+    background-color: #3a2020;
+    color: #ffc9c9;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #e06666, #c05050);
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #d05555, #ad4444);
+}
+
+/* --- Modal --- */
+body.modal-open {
+    overflow: hidden;
+}
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(30, 15, 20, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal {
+    background: var(--bg-card);
+    border-radius: 16px;
+    box-shadow: 0 18px 50px rgba(60, 20, 35, 0.35);
+    width: 100%;
+    max-width: 440px;
+    padding: 26px 26px 22px;
+    border: 1px solid var(--border-color);
+    transform: scale(0.98);
+    transition: transform 0.2s ease;
+}
+
+.modal-overlay.show .modal {
+    transform: scale(1);
+}
+
+.modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.modal-header h2 {
+    font-size: 20px;
+    color: var(--accent-pink-dark);
+    margin: 0;
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 0 4px;
+    border-radius: 6px;
+    transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.modal-close:hover,
+.modal-close:focus-visible {
+    color: var(--accent-pink-dark);
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+.modal-close:focus-visible,
+.btn-danger:focus-visible,
+.btn-cancel:focus-visible {
+    outline: 3px solid rgba(176, 66, 66, 0.35);
+    outline-offset: 2px;
+}
+
+.modal-body p {
+    color: var(--text-primary);
+    margin-bottom: 10px;
+    font-size: 15px;
+}
+
+.modal-body #cancel-event-title {
+    font-weight: 700;
+}
+
+.modal-event-date {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.modal-footer {
+    margin-top: 18px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.modal-footer .btn {
+    padding: 10px 20px;
+    font-size: 14px;
+}
+
+/* --- My Registered Events: responsive behaviour --- */
+@media (max-width: 768px) {
+    .table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .table {
+        min-width: 720px;
+    }
+    .modal-footer {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+    .modal-footer .btn {
+        width: 100%;
+        text-align: center;
+    }
+}

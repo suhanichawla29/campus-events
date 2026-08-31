@@ -11,6 +11,71 @@ $user_id = $_SESSION['user_id'];
 
 include_once 'includes/event_helpers.php';
 
+$_SESSION['flash'] = isset($_SESSION['flash']) ? $_SESSION['flash'] : array();
+
+if (isset($_POST['cancel_registration'])) {
+
+    $result = "error";
+
+    if (check_csrf()) {
+
+        $event_id = isset($_POST['event_id']) ? (int)$_POST['event_id'] : 0;
+
+        if ($event_id > 0) {
+            $event = null;
+            $stmt = mysqli_prepare($conn, "SELECT id, title, event_date, event_time FROM events WHERE id = ?");
+            if ($stmt) {
+                mysqli_stmt_bind_param($stmt, "i", $event_id);
+                if (mysqli_stmt_execute($stmt)) {
+                    $res = mysqli_stmt_get_result($stmt);
+                    $event = $res ? mysqli_fetch_assoc($res) : null;
+                }
+                mysqli_stmt_close($stmt);
+            }
+
+            if (!$event) {
+                $result = "invalid";
+            } else {
+
+                $now = time();
+                $start = strtotime($event['event_date'] . " " . ($event['event_time'] ? $event['event_time'] : "00:00:00"));
+                $started = $start > 0 && $now >= $start;
+
+                $owns = false;
+                $check = mysqli_prepare($conn, "SELECT id FROM registrations WHERE user_id = ? AND event_id = ?");
+                if ($check) {
+                    mysqli_stmt_bind_param($check, "ii", $user_id, $event_id);
+                    mysqli_stmt_execute($check);
+                    mysqli_stmt_store_result($check);
+                    $owns = mysqli_stmt_num_rows($check) > 0;
+                    mysqli_stmt_close($check);
+                }
+
+                if (!$owns) {
+                    $result = "not_registered";
+                } else if ($started) {
+                    $result = "closed";
+                } else {
+                    $del = mysqli_prepare($conn, "DELETE FROM registrations WHERE user_id = ? AND event_id = ?");
+                    if ($del) {
+                        mysqli_stmt_bind_param($del, "ii", $user_id, $event_id);
+                        if (mysqli_stmt_execute($del) && mysqli_stmt_affected_rows($del) > 0) {
+                            $result = "success";
+                            $_SESSION['flash']['title'] = $event['title'];
+                        }
+                        mysqli_stmt_close($del);
+                    }
+                }
+            }
+        }
+    }
+
+    $_SESSION['flash']['type'] = $result;
+
+    header("Location: dashboard.php");
+    exit();
+}
+
 if (isset($_GET['view'])) {
     $event_id = (int)$_GET['view'];
 
@@ -132,6 +197,9 @@ if (isset($_GET['view'])) {
                              isset($event['capacity']) ? $event['capacity'] : 0);
     $is_full = (!$seat['unlimited'] && $seat['available'] == 0);
 
+    $ev_start = strtotime($event['event_date'] . " " . ($event['event_time'] ? $event['event_time'] : "00:00:00"));
+    $ev_started = $ev_start > 0 && time() >= $ev_start;
+
     include 'includes/header.php';
 ?>
 
@@ -214,7 +282,17 @@ if (isset($_GET['view'])) {
         <?php } ?>
 
         <?php if ($already_registered) { ?>
-            <div class="alert alert-info">You are already registered for this event.</div>
+            <?php if ($ev_started) { ?>
+                <div class="alert alert-info">Cancellation is no longer available for this event.</div>
+            <?php } else { ?>
+                <div class="alert alert-info">You are already registered for this event.</div>
+                <button type="button" class="btn btn-cancel js-cancel-trigger"
+                        data-event-id="<?= (int)$event['id'] ?>"
+                        data-event-title="<?= htmlspecialchars($event['title'], ENT_QUOTES) ?>"
+                        data-event-date="<?= date("d M Y", strtotime($event['event_date'])) ?>">
+                    Cancel Registration
+                </button>
+            <?php } ?>
         <?php } elseif ($is_full) { ?>
             <button type="button" class="btn btn-primary btn-disabled" disabled>Event Full</button>
         <?php } ?>
@@ -222,6 +300,8 @@ if (isset($_GET['view'])) {
     </div>
 
 </div>
+
+<?php include 'includes/cancel_modal.php'; ?>
 
 <?php include 'includes/footer.php';
 exit();
@@ -271,21 +351,67 @@ if ($my_stmt) {
 
     <h2>Welcome, <?= $_SESSION['user_name'] ?>!</h2>
 
+    <?php
+        $flash_type  = isset($_SESSION['flash']['type']) ? $_SESSION['flash']['type'] : "";
+        $flash_title = isset($_SESSION['flash']['title']) ? $_SESSION['flash']['title'] : "";
+
+        if ($flash_type != "") {
+            if ($flash_type == "success") {
+                $flash_msg = 'Your registration for &ldquo;' . htmlspecialchars($flash_title) . '&rdquo; has been cancelled successfully. One seat is now available.';
+                $flash_class = "alert-success";
+            } elseif ($flash_type == "not_registered") {
+                $flash_msg = "You are not currently registered for this event.";
+                $flash_class = "alert-error";
+            } elseif ($flash_type == "closed") {
+                $flash_msg = "Cancellation is no longer available because this event has already started.";
+                $flash_class = "alert-error";
+            } elseif ($flash_type == "invalid") {
+                $flash_msg = "Unable to process the cancellation request. Please try again.";
+                $flash_class = "alert-error";
+            } else {
+                $flash_msg = "Unable to process the cancellation request. Please try again.";
+                $flash_class = "alert-error";
+            }
+            echo '<div class="alert ' . $flash_class . '">' . $flash_msg . '</div>';
+            unset($_SESSION['flash']);
+        }
+    ?>
+
     <section class="dashboard-section">
         <h3>My Registered Events</h3>
 
         <?php if ($my_events_result && mysqli_num_rows($my_events_result) > 0) { ?>
+            <div class="table-wrap">
             <table class="table">
-                <tr><th>Event</th><th>Date</th><th>Venue</th><th>Registered On</th></tr>
+                <tr><th>Event</th><th>Date</th><th>Venue</th><th>Registered On</th><th>Status</th><th>Action</th></tr>
                 <?php while ($re = mysqli_fetch_assoc($my_events_result)) { ?>
+                    <?php
+                        $ev_started = strtotime($re['event_date'] . " " . ($re['event_time'] ? $re['event_time'] : "00:00:00"));
+                        $ev_cancellable = ($ev_started > 0 && time() < $ev_started);
+                    ?>
                     <tr>
                         <td><a href="dashboard.php?view=<?= (int)$re['id'] ?>"><?= htmlspecialchars($re['title']) ?></a></td>
                         <td><?= date("d M Y", strtotime($re['event_date'])) ?></td>
                         <td><?= htmlspecialchars($re['venue']) ?></td>
                         <td><?= date("d M Y", strtotime($re['registered_at'])) ?></td>
+                        <td><span class="status-badge status-available">Registered</span></td>
+                        <td>
+                            <?php if ($ev_cancellable) { ?>
+                                <button type="button" class="btn btn-cancel js-cancel-trigger"
+                                        data-event-id="<?= (int)$re['id'] ?>"
+                                        data-event-title="<?= htmlspecialchars($re['title'], ENT_QUOTES) ?>"
+                                        data-event-date="<?= date("d M Y", strtotime($re['event_date'])) ?>">
+                                    Cancel Registration
+                                </button>
+                            <?php } else { ?>
+                                <button type="button" class="btn btn-cancel btn-cancel-disabled" disabled title="Cancellation is no longer available for this event.">Cancel Registration</button>
+                                <span class="cancel-closed-note">Cancellation is no longer available for this event.</span>
+                            <?php } ?>
+                        </td>
                     </tr>
                 <?php } ?>
             </table>
+            </div>
         <?php } else { ?>
             <p class="no-events">You haven't registered for any events yet.</p>
         <?php } ?>
@@ -339,5 +465,7 @@ if ($my_stmt) {
     </section>
 
 </div>
+
+<?php include 'includes/cancel_modal.php'; ?>
 
 <?php include 'includes/footer.php'; ?>
