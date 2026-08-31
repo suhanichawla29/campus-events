@@ -1,6 +1,8 @@
 <?php
+// Start the session and check that the student is logged in
 session_start();
 include 'includes/config.php';
+include_once 'includes/event_helpers.php';
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: auth.php?action=login");
@@ -9,26 +11,26 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
-include_once 'includes/event_helpers.php';
-
+// Keep any success or error message from the previous action
 $_SESSION['flash'] = isset($_SESSION['flash']) ? $_SESSION['flash'] : array();
 
+// Cancel the student's registration (sent from the confirmation modal)
 if (isset($_POST['cancel_registration'])) {
-
     $result = "error";
 
+    // Only continue if the hidden CSRF token is correct
     if (check_csrf()) {
-
         $event_id = isset($_POST['event_id']) ? (int)$_POST['event_id'] : 0;
 
         if ($event_id > 0) {
-            $event = null;
+            // Find the event the student wants to cancel
             $stmt = mysqli_prepare($conn, "SELECT id, title, event_date, event_time FROM events WHERE id = ?");
+            $event = null;
             if ($stmt) {
                 mysqli_stmt_bind_param($stmt, "i", $event_id);
                 if (mysqli_stmt_execute($stmt)) {
-                    $res = mysqli_stmt_get_result($stmt);
-                    $event = $res ? mysqli_fetch_assoc($res) : null;
+                    $event_result = mysqli_stmt_get_result($stmt);
+                    $event = $event_result ? mysqli_fetch_assoc($event_result) : null;
                 }
                 mysqli_stmt_close($stmt);
             }
@@ -36,34 +38,36 @@ if (isset($_POST['cancel_registration'])) {
             if (!$event) {
                 $result = "invalid";
             } else {
-
+                // Check whether the event has already started
                 $now = time();
                 $start = strtotime($event['event_date'] . " " . ($event['event_time'] ? $event['event_time'] : "00:00:00"));
                 $started = $start > 0 && $now >= $start;
 
-                $owns = false;
-                $check = mysqli_prepare($conn, "SELECT id FROM registrations WHERE user_id = ? AND event_id = ?");
-                if ($check) {
-                    mysqli_stmt_bind_param($check, "ii", $user_id, $event_id);
-                    mysqli_stmt_execute($check);
-                    mysqli_stmt_store_result($check);
-                    $owns = mysqli_stmt_num_rows($check) > 0;
-                    mysqli_stmt_close($check);
+                // Check that the student is registered for this event
+                $owns_registration = false;
+                $check_registration = mysqli_prepare($conn, "SELECT id FROM registrations WHERE user_id = ? AND event_id = ?");
+                if ($check_registration) {
+                    mysqli_stmt_bind_param($check_registration, "ii", $user_id, $event_id);
+                    mysqli_stmt_execute($check_registration);
+                    mysqli_stmt_store_result($check_registration);
+                    $owns_registration = mysqli_stmt_num_rows($check_registration) > 0;
+                    mysqli_stmt_close($check_registration);
                 }
 
-                if (!$owns) {
+                if (!$owns_registration) {
                     $result = "not_registered";
                 } else if ($started) {
                     $result = "closed";
                 } else {
-                    $del = mysqli_prepare($conn, "DELETE FROM registrations WHERE user_id = ? AND event_id = ?");
-                    if ($del) {
-                        mysqli_stmt_bind_param($del, "ii", $user_id, $event_id);
-                        if (mysqli_stmt_execute($del) && mysqli_stmt_affected_rows($del) > 0) {
+                    // Delete only this student's registration for this event
+                    $delete_registration = mysqli_prepare($conn, "DELETE FROM registrations WHERE user_id = ? AND event_id = ?");
+                    if ($delete_registration) {
+                        mysqli_stmt_bind_param($delete_registration, "ii", $user_id, $event_id);
+                        if (mysqli_stmt_execute($delete_registration) && mysqli_stmt_affected_rows($delete_registration) > 0) {
                             $result = "success";
                             $_SESSION['flash']['title'] = $event['title'];
                         }
-                        mysqli_stmt_close($del);
+                        mysqli_stmt_close($delete_registration);
                     }
                 }
             }
@@ -72,13 +76,16 @@ if (isset($_POST['cancel_registration'])) {
 
     $_SESSION['flash']['type'] = $result;
 
+    // Redirect after the POST so the page cannot be refreshed twice
     header("Location: dashboard.php");
     exit();
 }
 
+// Show the full details of one event
 if (isset($_GET['view'])) {
     $event_id = (int)$_GET['view'];
 
+    // Find the event and count how many students have registered for it
     $stmt = mysqli_prepare($conn, "SELECT e.*, COUNT(r.id) AS registered_count
                                    FROM events e
                                    LEFT JOIN registrations r ON r.event_id = e.id
@@ -88,87 +95,93 @@ if (isset($_GET['view'])) {
     if ($stmt) {
         mysqli_stmt_bind_param($stmt, "i", $event_id);
         if (mysqli_stmt_execute($stmt)) {
-            $result = mysqli_stmt_get_result($stmt);
-            $event  = $result ? mysqli_fetch_assoc($result) : null;
+            $event_result = mysqli_stmt_get_result($stmt);
+            $event = $event_result ? mysqli_fetch_assoc($event_result) : null;
         }
         mysqli_stmt_close($stmt);
     }
 
+    // If the event does not exist, go back to the dashboard
     if (!$event) {
         header("Location: dashboard.php");
         exit();
     }
 
+    // Check whether this student is already registered for the event
     $already_registered = false;
-    $check = mysqli_prepare($conn, "SELECT id FROM registrations WHERE user_id = ? AND event_id = ?");
-    if ($check) {
-        mysqli_stmt_bind_param($check, "ii", $user_id, $event_id);
-        mysqli_stmt_execute($check);
-        mysqli_stmt_store_result($check);
-        if (mysqli_stmt_num_rows($check) > 0) {
+    $check_registration = mysqli_prepare($conn, "SELECT id FROM registrations WHERE user_id = ? AND event_id = ?");
+    if ($check_registration) {
+        mysqli_stmt_bind_param($check_registration, "ii", $user_id, $event_id);
+        mysqli_stmt_execute($check_registration);
+        mysqli_stmt_store_result($check_registration);
+        if (mysqli_stmt_num_rows($check_registration) > 0) {
             $already_registered = true;
         }
-        mysqli_stmt_close($check);
+        mysqli_stmt_close($check_registration);
     }
 
     $message = "";
 
+    // Register this student for the event (sent from the Register button)
     if (isset($_POST['register_event']) && !$already_registered) {
-
         $done = false;
 
+        // Lock the event row so two students cannot take the last seat at once
         mysqli_begin_transaction($conn);
 
-        $lock = mysqli_prepare($conn, "SELECT capacity FROM events WHERE id = ? FOR UPDATE");
-        if ($lock) {
-            mysqli_stmt_bind_param($lock, "i", $event_id);
-            mysqli_stmt_execute($lock);
-            mysqli_stmt_store_result($lock);
+        $lock_statement = mysqli_prepare($conn, "SELECT capacity FROM events WHERE id = ? FOR UPDATE");
+        if ($lock_statement) {
+            mysqli_stmt_bind_param($lock_statement, "i", $event_id);
+            mysqli_stmt_execute($lock_statement);
+            mysqli_stmt_store_result($lock_statement);
 
-            if (mysqli_stmt_num_rows($lock) == 1) {
-
-                mysqli_stmt_bind_result($lock, $db_capacity);
-                mysqli_stmt_fetch($lock);
+            if (mysqli_stmt_num_rows($lock_statement) == 1) {
+                mysqli_stmt_bind_result($lock_statement, $db_capacity);
+                mysqli_stmt_fetch($lock_statement);
                 $capacity = max(0, (int)$db_capacity);
 
                 $current_registrations = 0;
                 $count_ok = false;
 
-                $count = mysqli_prepare($conn, "SELECT COUNT(*) FROM registrations WHERE event_id = ?");
-                if ($count) {
-                    mysqli_stmt_bind_param($count, "i", $event_id);
-                    if (mysqli_stmt_execute($count)) {
-                        mysqli_stmt_bind_result($count, $current_registrations);
-                        mysqli_stmt_fetch($count);
+                // Count how many students have already registered
+                $count_statement = mysqli_prepare($conn, "SELECT COUNT(*) FROM registrations WHERE event_id = ?");
+                if ($count_statement) {
+                    mysqli_stmt_bind_param($count_statement, "i", $event_id);
+                    if (mysqli_stmt_execute($count_statement)) {
+                        mysqli_stmt_bind_result($count_statement, $current_registrations);
+                        mysqli_stmt_fetch($count_statement);
                         $count_ok = true;
                     }
-                    mysqli_stmt_close($count);
+                    mysqli_stmt_close($count_statement);
                 }
 
                 if (!$count_ok) {
                     $done = false;
                 } else if ($capacity > 0 && $current_registrations >= $capacity) {
+                    // The event is full, so registration is closed
                     $message = "full";
                     $done = true;
                 } else {
-                    $insert = mysqli_prepare($conn, "INSERT INTO registrations (user_id, event_id) VALUES (?, ?)");
-                    if ($insert) {
-                        mysqli_stmt_bind_param($insert, "ii", $user_id, $event_id);
+                    // Save the new registration
+                    $insert_statement = mysqli_prepare($conn, "INSERT INTO registrations (user_id, event_id) VALUES (?, ?)");
+                    if ($insert_statement) {
+                        mysqli_stmt_bind_param($insert_statement, "ii", $user_id, $event_id);
 
-                        if (mysqli_stmt_execute($insert)) {
+                        if (mysqli_stmt_execute($insert_statement)) {
                             $message = "success";
                             $already_registered = true;
                             $done = true;
-                        } else if (mysqli_stmt_errno($insert) == 1062) {
+                        } else if (mysqli_stmt_errno($insert_statement) == 1062) {
+                            // The same student tried to register twice at the same moment
                             $already_registered = true;
                             $done = true;
                         }
-                        mysqli_stmt_close($insert);
+                        mysqli_stmt_close($insert_statement);
                     }
                 }
             }
 
-            mysqli_stmt_close($lock);
+            mysqli_stmt_close($lock_statement);
         }
 
         if ($done) {
@@ -180,25 +193,27 @@ if (isset($_GET['view'])) {
             }
         }
 
-        $fresh = mysqli_prepare($conn, "SELECT COUNT(*) FROM registrations WHERE event_id = ?");
-        if ($fresh) {
-            mysqli_stmt_bind_param($fresh, "i", $event_id);
-            if (mysqli_stmt_execute($fresh)) {
-                mysqli_stmt_bind_result($fresh, $new_count);
-                if (mysqli_stmt_fetch($fresh)) {
+        // Get the fresh registration count so the seats update on the page
+        $fresh_count = mysqli_prepare($conn, "SELECT COUNT(*) FROM registrations WHERE event_id = ?");
+        if ($fresh_count) {
+            mysqli_stmt_bind_param($fresh_count, "i", $event_id);
+            if (mysqli_stmt_execute($fresh_count)) {
+                mysqli_stmt_bind_result($fresh_count, $new_count);
+                if (mysqli_stmt_fetch($fresh_count)) {
                     $event['registered_count'] = $new_count;
                 }
             }
-            mysqli_stmt_close($fresh);
+            mysqli_stmt_close($fresh_count);
         }
     }
 
-    $seat    = get_seat_info(isset($event['registered_count']) ? $event['registered_count'] : 0,
-                             isset($event['capacity']) ? $event['capacity'] : 0);
+    // Work out the seat numbers and full/available status
+    $seat = get_seat_info(isset($event['registered_count']) ? $event['registered_count'] : 0,
+                          isset($event['capacity']) ? $event['capacity'] : 0);
     $is_full = (!$seat['unlimited'] && $seat['available'] == 0);
 
-    $ev_start = strtotime($event['event_date'] . " " . ($event['event_time'] ? $event['event_time'] : "00:00:00"));
-    $ev_started = $ev_start > 0 && time() >= $ev_start;
+    $event_start = strtotime($event['event_date'] . " " . ($event['event_time'] ? $event['event_time'] : "00:00:00"));
+    $event_started = $event_start > 0 && time() >= $event_start;
 
     include 'includes/header.php';
 ?>
@@ -282,7 +297,7 @@ if (isset($_GET['view'])) {
         <?php } ?>
 
         <?php if ($already_registered) { ?>
-            <?php if ($ev_started) { ?>
+            <?php if ($event_started) { ?>
                 <div class="alert alert-info">Cancellation is no longer available for this event.</div>
             <?php } else { ?>
                 <div class="alert alert-info">You are already registered for this event.</div>
@@ -314,18 +329,19 @@ if (isset($_GET['search'])) {
     $search = trim($_GET['search']);
 }
 
-$sql = "SELECT e.*, COUNT(r.id) AS registered_count
-        FROM events e
-        LEFT JOIN registrations r ON r.event_id = e.id
-        WHERE e.event_date >= CURDATE()";
+// Find upcoming events, optionally matching the search term
+$query = "SELECT e.*, COUNT(r.id) AS registered_count
+          FROM events e
+          LEFT JOIN registrations r ON r.event_id = e.id
+          WHERE e.event_date >= CURDATE()";
 
 if ($search != "") {
-    $sql .= " AND (e.title LIKE ? OR e.category LIKE ?)";
+    $query .= " AND (e.title LIKE ? OR e.category LIKE ?)";
 }
 
-$sql .= " GROUP BY e.id ORDER BY e.event_date ASC";
+$query .= " GROUP BY e.id ORDER BY e.event_date ASC";
 
-$stmt = mysqli_prepare($conn, $sql);
+$stmt = mysqli_prepare($conn, $query);
 if ($search != "") {
     $like = "%" . $search . "%";
     mysqli_stmt_bind_param($stmt, "ss", $like, $like);
@@ -333,16 +349,17 @@ if ($search != "") {
 mysqli_stmt_execute($stmt);
 $events_result = mysqli_stmt_get_result($stmt);
 
+// Find the events this student has registered for
 $my_events_result = false;
-$my_stmt = mysqli_prepare($conn, "SELECT e.*, r.registered_at
-                                  FROM registrations r
-                                  JOIN events e ON r.event_id = e.id
-                                  WHERE r.user_id = ?
-                                  ORDER BY e.event_date ASC");
-if ($my_stmt) {
-    mysqli_stmt_bind_param($my_stmt, "i", $user_id);
-    if (mysqli_stmt_execute($my_stmt)) {
-        $my_events_result = mysqli_stmt_get_result($my_stmt);
+$my_events_stmt = mysqli_prepare($conn, "SELECT e.*, r.registered_at
+                                         FROM registrations r
+                                         JOIN events e ON r.event_id = e.id
+                                         WHERE r.user_id = ?
+                                         ORDER BY e.event_date ASC");
+if ($my_events_stmt) {
+    mysqli_stmt_bind_param($my_events_stmt, "i", $user_id);
+    if (mysqli_stmt_execute($my_events_stmt)) {
+        $my_events_result = mysqli_stmt_get_result($my_events_stmt);
     }
 }
 ?>
@@ -352,6 +369,7 @@ if ($my_stmt) {
     <h2>Welcome, <?= $_SESSION['user_name'] ?>!</h2>
 
     <?php
+        // Show the message left after the last cancellation attempt
         $flash_type  = isset($_SESSION['flash']['type']) ? $_SESSION['flash']['type'] : "";
         $flash_title = isset($_SESSION['flash']['title']) ? $_SESSION['flash']['title'] : "";
 
@@ -384,23 +402,23 @@ if ($my_stmt) {
             <div class="table-wrap">
             <table class="table">
                 <tr><th>Event</th><th>Date</th><th>Venue</th><th>Registered On</th><th>Status</th><th>Action</th></tr>
-                <?php while ($re = mysqli_fetch_assoc($my_events_result)) { ?>
+                <?php while ($registration = mysqli_fetch_assoc($my_events_result)) { ?>
                     <?php
-                        $ev_started = strtotime($re['event_date'] . " " . ($re['event_time'] ? $re['event_time'] : "00:00:00"));
-                        $ev_cancellable = ($ev_started > 0 && time() < $ev_started);
+                        $event_start = strtotime($registration['event_date'] . " " . ($registration['event_time'] ? $registration['event_time'] : "00:00:00"));
+                        $can_cancel = ($event_start > 0 && time() < $event_start);
                     ?>
                     <tr>
-                        <td><a href="dashboard.php?view=<?= (int)$re['id'] ?>"><?= htmlspecialchars($re['title']) ?></a></td>
-                        <td><?= date("d M Y", strtotime($re['event_date'])) ?></td>
-                        <td><?= htmlspecialchars($re['venue']) ?></td>
-                        <td><?= date("d M Y", strtotime($re['registered_at'])) ?></td>
+                        <td><a href="dashboard.php?view=<?= (int)$registration['id'] ?>"><?= htmlspecialchars($registration['title']) ?></a></td>
+                        <td><?= date("d M Y", strtotime($registration['event_date'])) ?></td>
+                        <td><?= htmlspecialchars($registration['venue']) ?></td>
+                        <td><?= date("d M Y", strtotime($registration['registered_at'])) ?></td>
                         <td><span class="status-badge status-available">Registered</span></td>
                         <td>
-                            <?php if ($ev_cancellable) { ?>
+                            <?php if ($can_cancel) { ?>
                                 <button type="button" class="btn btn-cancel js-cancel-trigger"
-                                        data-event-id="<?= (int)$re['id'] ?>"
-                                        data-event-title="<?= htmlspecialchars($re['title'], ENT_QUOTES) ?>"
-                                        data-event-date="<?= date("d M Y", strtotime($re['event_date'])) ?>">
+                                        data-event-id="<?= (int)$registration['id'] ?>"
+                                        data-event-title="<?= htmlspecialchars($registration['title'], ENT_QUOTES) ?>"
+                                        data-event-date="<?= date("d M Y", strtotime($registration['event_date'])) ?>">
                                     Cancel Registration
                                 </button>
                             <?php } else { ?>
@@ -431,31 +449,8 @@ if ($my_stmt) {
         <div class="event-grid">
 
             <?php if ($events_result && mysqli_num_rows($events_result) > 0) { ?>
-                <?php while ($ev = mysqli_fetch_assoc($events_result)) { ?>
-                    <?php
-                        $img = $ev['image'] ? "uploads/" . $ev['image'] : "assets/images/default-event.jpg";
-                        $seat = get_seat_info($ev['registered_count'], isset($ev['capacity']) ? $ev['capacity'] : 0);
-                    ?>
-
-                    <div class="event-card">
-                        <img src="<?= $img ?>" alt="<?= htmlspecialchars($ev['title']) ?>" class="event-card-img">
-
-                        <div class="event-card-body">
-                            <h3><?= htmlspecialchars($ev['title']) ?></h3>
-
-                            <p class="event-date">
-                                <?= date("d M Y", strtotime($ev['event_date'])) ?> at <?= date("h:i A", strtotime($ev['event_time'])) ?>
-                            </p>
-
-                            <p><strong>Venue:</strong> <?= htmlspecialchars($ev['venue']) ?></p>
-                            <p><strong>Category:</strong> <?= htmlspecialchars($ev['category']) ?></p>
-
-                            <?= capacity_html($seat) ?>
-
-                            <a href="dashboard.php?view=<?= (int)$ev['id'] ?>" class="btn btn-small">View &amp; Register</a>
-                        </div>
-                    </div>
-
+                <?php while ($event = mysqli_fetch_assoc($events_result)) { ?>
+                    <?= event_card($event, "View &amp; Register") ?>
                 <?php } ?>
             <?php } else { ?>
                 <p class="no-events">No events found.</p>

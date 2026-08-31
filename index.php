@@ -14,18 +14,19 @@ if (isset($_GET['search'])) {
     $search = trim($_GET['search']);
 }
 
-$sql = "SELECT e.*, COUNT(r.id) AS registered_count
-        FROM events e
-        LEFT JOIN registrations r ON r.event_id = e.id
-        WHERE e.event_date >= CURDATE()";
+// Find upcoming events, optionally matching the search term
+$query = "SELECT e.*, COUNT(r.id) AS registered_count
+          FROM events e
+          LEFT JOIN registrations r ON r.event_id = e.id
+          WHERE e.event_date >= CURDATE()";
 
 if ($search != "") {
-    $sql .= " AND (e.title LIKE ? OR e.description LIKE ? OR e.category LIKE ?)";
+    $query .= " AND (e.title LIKE ? OR e.description LIKE ? OR e.category LIKE ?)";
 }
 
-$sql .= " GROUP BY e.id ORDER BY e.event_date ASC LIMIT 6";
+$query .= " GROUP BY e.id ORDER BY e.event_date ASC LIMIT 6";
 
-$stmt = mysqli_prepare($conn, $sql);
+$stmt = mysqli_prepare($conn, $query);
 if ($search != "") {
     $like = "%" . $search . "%";
     mysqli_stmt_bind_param($stmt, "sss", $like, $like, $like);
@@ -59,31 +60,8 @@ $result = mysqli_stmt_get_result($stmt);
     <div class="event-grid">
 
         <?php if ($result && mysqli_num_rows($result) > 0) { ?>
-            <?php while ($ev = mysqli_fetch_assoc($result)) { ?>
-                <?php
-                    $img = $ev['image'] ? "uploads/" . $ev['image'] : "assets/images/default-event.jpg";
-                    $seat = get_seat_info($ev['registered_count'], isset($ev['capacity']) ? $ev['capacity'] : 0);
-                ?>
-
-                <div class="event-card">
-                    <img src="<?= $img ?>" alt="<?= htmlspecialchars($ev['title']) ?>" class="event-card-img">
-
-                    <div class="event-card-body">
-                        <h3><?= htmlspecialchars($ev['title']) ?></h3>
-
-                        <p class="event-date">
-                            <?= date("d M Y", strtotime($ev['event_date'])) ?> at <?= date("h:i A", strtotime($ev['event_time'])) ?>
-                        </p>
-
-                        <p><strong>Venue:</strong> <?= htmlspecialchars($ev['venue']) ?></p>
-                        <p><strong>Category:</strong> <?= htmlspecialchars($ev['category']) ?></p>
-
-                        <?= capacity_html($seat) ?>
-
-                        <a href="dashboard.php?view=<?= (int)$ev['id'] ?>" class="btn btn-small">View Details</a>
-                    </div>
-                </div>
-
+            <?php while ($event = mysqli_fetch_assoc($result)) { ?>
+                <?= event_card($event, "View Details") ?>
             <?php } ?>
         <?php } else { ?>
             <p class="no-events">No upcoming events at the moment. Check back later!</p>

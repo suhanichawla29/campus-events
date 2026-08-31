@@ -1,27 +1,30 @@
+// Restore the saved light or dark theme when the page loads
 (function() {
-    var theme = localStorage.getItem("theme");
-    var btn = document.getElementById("theme-btn");
-    if (theme === "dark") {
+    var savedTheme = localStorage.getItem("theme");
+    var themeButton = document.getElementById("theme-btn");
+    if (savedTheme === "dark") {
         document.body.classList.add("dark-mode");
-        if (btn) btn.innerHTML = "☀️";
+        if (themeButton) themeButton.innerHTML = "☀️";
     } else {
         document.body.classList.remove("dark-mode");
-        if (btn) btn.innerHTML = "🌙";
+        if (themeButton) themeButton.innerHTML = "🌙";
     }
 })();
 
+// Switch between light and dark theme when the button is clicked
 function toggleTheme() {
     document.body.classList.toggle("dark-mode");
-    var btn = document.getElementById("theme-btn");
+    var themeButton = document.getElementById("theme-btn");
     if (document.body.classList.contains("dark-mode")) {
         localStorage.setItem("theme", "dark");
-        if (btn) btn.innerHTML = "☀️";
+        if (themeButton) themeButton.innerHTML = "☀️";
     } else {
         localStorage.setItem("theme", "light");
-        if (btn) btn.innerHTML = "🌙";
+        if (themeButton) themeButton.innerHTML = "🌙";
     }
 }
 
+// Check the registration form before it is sent
 function validateRegisterForm() {
     var name = document.getElementById("reg-name").value.trim();
     var email = document.getElementById("reg-email").value.trim();
@@ -51,6 +54,7 @@ function validateRegisterForm() {
     return true;
 }
 
+// Check the login form before it is sent
 function validateLoginForm() {
     var email = document.getElementById("login-email").value.trim();
     var password = document.getElementById("login-password").value;
@@ -66,55 +70,58 @@ function validateLoginForm() {
     return true;
 }
 
+// Show the cancellation confirmation modal and handle the Cancel buttons
 (function() {
-    var modal = document.getElementById("cancel-modal");
-    if (!modal) {
+    var cancelModal = document.getElementById("cancel-modal");
+    if (!cancelModal) {
         return;
     }
 
-    var overlay = modal;
-    var closeBtn = document.getElementById("cancel-modal-close");
-    var keepBtn = document.getElementById("cancel-keep");
-    var form = document.getElementById("cancel-form");
-    var eventId = document.getElementById("cancel-event-id");
-    var eventTitle = document.getElementById("cancel-event-title");
-    var eventDate = document.getElementById("cancel-event-date");
+    var overlay = cancelModal;
+    var closeButton = document.getElementById("cancel-modal-close");
+    var keepButton = document.getElementById("cancel-keep");
+    var cancelForm = document.getElementById("cancel-form");
+    var selectedEventId = document.getElementById("cancel-event-id");
+    var selectedEventName = document.getElementById("cancel-event-title");
+    var selectedEventDate = document.getElementById("cancel-event-date");
     var lastFocused = null;
 
     var focusableSelector = "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])";
 
-    function focusables() {
+    // Return the visible focusable elements inside the modal
+    function focusableElements() {
         return Array.prototype.filter.call(
-            modal.querySelectorAll(focusableSelector),
-            function(el) { return !el.disabled && el.offsetParent !== null; }
+            cancelModal.querySelectorAll(focusableSelector),
+            function(element) { return !element.disabled && element.offsetParent !== null; }
         );
     }
 
     function openModal(id, title, date) {
-        eventId.value = id;
-        eventTitle.textContent = title;
-        eventDate.textContent = date;
+        selectedEventId.value = id;
+        selectedEventName.textContent = title;
+        selectedEventDate.textContent = date;
         lastFocused = document.activeElement;
-        modal.classList.add("show");
+        cancelModal.classList.add("show");
         document.body.classList.add("modal-open");
-        var first = focusables()[0];
+        var first = focusableElements()[0];
         if (first) {
             first.focus();
         }
     }
 
     function closeModal() {
-        modal.classList.remove("show");
+        cancelModal.classList.remove("show");
         document.body.classList.remove("modal-open");
         if (lastFocused) {
             lastFocused.focus();
         }
     }
 
-    document.addEventListener("click", function(ev) {
-        var trigger = ev.target.closest(".js-cancel-trigger");
+    // Open the modal when a Cancel Registration button is clicked
+    document.addEventListener("click", function(event) {
+        var trigger = event.target.closest(".js-cancel-trigger");
         if (trigger) {
-            ev.preventDefault();
+            event.preventDefault();
             var id = trigger.getAttribute("data-event-id");
             var title = trigger.getAttribute("data-event-title");
             var date = trigger.getAttribute("data-event-date");
@@ -122,39 +129,41 @@ function validateLoginForm() {
             return;
         }
 
-        if (ev.target === overlay) {
+        // Close the modal when the dark area outside it is clicked
+        if (event.target === overlay) {
             closeModal();
         }
     });
 
-    if (closeBtn) {
-        closeBtn.addEventListener("click", closeModal);
+    if (closeButton) {
+        closeButton.addEventListener("click", closeModal);
     }
-    if (keepBtn) {
-        keepBtn.addEventListener("click", closeModal);
+    if (keepButton) {
+        keepButton.addEventListener("click", closeModal);
     }
 
-    document.addEventListener("keydown", function(ev) {
-        if (!modal.classList.contains("show")) {
+    // Close with Escape and keep the Tab key moving between the buttons
+    document.addEventListener("keydown", function(event) {
+        if (!cancelModal.classList.contains("show")) {
             return;
         }
-        if (ev.key === "Escape") {
-            ev.preventDefault();
+        if (event.key === "Escape") {
+            event.preventDefault();
             closeModal();
             return;
         }
-        if (ev.key === "Tab") {
-            var list = focusables();
+        if (event.key === "Tab") {
+            var list = focusableElements();
             if (list.length === 0) {
                 return;
             }
             var first = list[0];
             var last = list[list.length - 1];
-            if (ev.shiftKey && document.activeElement === first) {
-                ev.preventDefault();
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
                 last.focus();
-            } else if (!ev.shiftKey && document.activeElement === last) {
-                ev.preventDefault();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
                 first.focus();
             }
         }

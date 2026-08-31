@@ -1,7 +1,9 @@
 <?php
+// Start a session for the admin panel
 session_start();
 include '../includes/config.php';
 
+// If an admin is already logged in, go to the dashboard
 if (isset($_SESSION['admin_id'])) {
     header("Location: index.php");
     exit();
@@ -9,9 +11,15 @@ if (isset($_SESSION['admin_id'])) {
 
 $error = "";
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $username = mysqli_real_escape_string($conn, $_POST['username']);
+    $username = $_POST['username'];
     $password = $_POST['password'];
-    $result = mysqli_query($conn, "SELECT * FROM admins WHERE username = '$username' AND password = MD5('$password')");
+
+    // Check that the username and password match an admin account
+    $stmt = mysqli_prepare($conn, "SELECT * FROM admins WHERE username = ? AND password = MD5(?)");
+    mysqli_stmt_bind_param($stmt, "ss", $username, $password);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+
     if (mysqli_num_rows($result) == 1) {
         $admin = mysqli_fetch_assoc($result);
         $_SESSION['admin_id'] = $admin['id'];
@@ -29,7 +37,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login - Campus Events</title>
-    <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="../assets/css/style.css?v=3">
 </head>
 <body>
 <div class="admin-login-wrapper">
@@ -54,4 +62,3 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </div>
 </body>
 </html>
-

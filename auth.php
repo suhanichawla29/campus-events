@@ -1,9 +1,11 @@
 <?php
+// Start a session so we can remember the logged-in student
 session_start();
 include 'includes/config.php';
 
 $action = isset($_GET['action']) ? $_GET['action'] : 'login';
 
+// If the student is already logged in, send them to the dashboard
 if (isset($_SESSION['user_id'])) {
     header("Location: dashboard.php");
     exit();
@@ -12,12 +14,21 @@ if (isset($_SESSION['user_id'])) {
 $error = "";
 $success = "";
 
+// Log in an existing student
 if ($action == 'login' && $_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = mysqli_real_escape_string($conn, $_POST['email']);
+    $email = $_POST['email'];
     $password = $_POST['password'];
-    $result = mysqli_query($conn, "SELECT * FROM users WHERE email = '$email'");
+
+    // Find the student with this email
+    $stmt = mysqli_prepare($conn, "SELECT id, full_name, email, password FROM users WHERE email = ?");
+    mysqli_stmt_bind_param($stmt, "s", $email);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+
     if (mysqli_num_rows($result) == 1) {
         $user = mysqli_fetch_assoc($result);
+
+        // Check the password only if the email matched a student
         if (password_verify($password, $user['password'])) {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_name'] = $user['full_name'];
@@ -26,29 +37,43 @@ if ($action == 'login' && $_SERVER["REQUEST_METHOD"] == "POST") {
             exit();
         }
     }
+
     $error = "Invalid email or password!";
 }
 
+// Register a new student
 if ($action == 'register' && $_SERVER["REQUEST_METHOD"] == "POST") {
-    $full_name = mysqli_real_escape_string($conn, $_POST['full_name']);
-    $email = mysqli_real_escape_string($conn, $_POST['email']);
-    $phone = mysqli_real_escape_string($conn, $_POST['phone']);
+    $full_name = $_POST['full_name'];
+    $email = $_POST['email'];
+    $phone = $_POST['phone'];
     $password = $_POST['password'];
     $confirm = $_POST['confirm_password'];
+
     if ($password !== $confirm) {
         $error = "Passwords do not match!";
     } else {
-        $check = mysqli_query($conn, "SELECT id FROM users WHERE email = '$email'");
-        if (mysqli_num_rows($check) > 0) {
+        // Do not allow two students to use the same email
+        $check = mysqli_prepare($conn, "SELECT id FROM users WHERE email = ?");
+        mysqli_stmt_bind_param($check, "s", $email);
+        mysqli_stmt_execute($check);
+        mysqli_stmt_store_result($check);
+
+        if (mysqli_stmt_num_rows($check) > 0) {
             $error = "Email already registered! Please login.";
         } else {
+            // Save the student with a hashed password
             $hashed = password_hash($password, PASSWORD_DEFAULT);
-            if (mysqli_query($conn, "INSERT INTO users (full_name, email, phone, password) VALUES ('$full_name', '$email', '$phone', '$hashed')")) {
+            $insert = mysqli_prepare($conn, "INSERT INTO users (full_name, email, phone, password) VALUES (?, ?, ?, ?)");
+            mysqli_stmt_bind_param($insert, "ssss", $full_name, $email, $phone, $hashed);
+
+            if (mysqli_stmt_execute($insert)) {
                 $success = "Registration successful! You can now login.";
             } else {
                 $error = "Something went wrong. Please try again.";
             }
+            mysqli_stmt_close($insert);
         }
+        mysqli_stmt_close($check);
     }
 }
 
